@@ -10,3 +10,6 @@ pom.xml.asc
 /.prepl-port
 .hgignore
 .hg/
+builds/
+PLATFORM
+reports/

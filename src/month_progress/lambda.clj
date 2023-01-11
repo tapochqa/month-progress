@@ -2,16 +2,14 @@
 ;; https://cloud.yandex.ru/docs/functions/concepts/function-invoke
 
 (ns month-progress.lambda
-  
   (:require
    [clojure.java.io :as io]
    [cheshire.core :as json]
    [clojure.string :as str]
-   [month-progress.handling :as handling])
+   [month-progress.handling :as handling]
+   [month-progress.telegram :as telegram])
   
   (:import
-   java.io.File
-   java.io.InputStream
    java.util.Base64
    ))
 
@@ -33,38 +31,35 @@
            httpMethod
            body
            isBase64Encoded
-           headers]}]
-  {:remote-addr (get-in requestContext ["identity" "sourceIp"])
-   :uri (if (= path "") "/" path)
-   :query-params queryStringParameters
-   :request-method (-> httpMethod name str/lower-case keyword)
-   :headers (update-keys headers str/lower-case)
-   :body (if isBase64Encoded
-           (-> body
-               (str->bytes "UTF-8")
-               (b64-decode)
-               (io/input-stream))
-           (-> body
-               (str->bytes "UTF-8")
-               (io/input-stream)))})
-
-(comment
-  
-
-  
-  (-> (parse-request (json/parse-string (slurp "resources/yc-request.json")))
-    :body
-    slurp
-    (json/parse-string true))
-  
-  )
+           headers
+           messages]} {:keys [debug-chat-id] :as config}]
+  (let [parsed
+        {:remote-addr (get-in requestContext ["identity" "sourceIp"])
+         :uri (if (= path "") "/" path)
+         :query-params queryStringParameters
+         :request-method 
+         (if httpMethod
+           (-> httpMethod name str/lower-case keyword)
+           :trigger)
+         :headers (update-keys headers str/lower-case)
+         :messages (json/generate-string messages)
+         :body (if isBase64Encoded
+                 (-> (str "" body)
+                     (str->bytes "UTF-8")
+                     (b64-decode)
+                     (io/input-stream))
+                 (-> (str "" body)
+                     (str->bytes "UTF-8")
+                     (io/input-stream)))}]
+    (when debug-chat-id
+      (telegram/send-message config debug-chat-id (str parsed)))
+    parsed))
 
 
-
-(defn ->request []
+(defn ->request [config]
   (-> *in*
       (json/parse-stream)
-      (parse-request)))
+      (parse-request config)))
 
 
 (defn encode-body [body]
@@ -80,15 +75,26 @@
 
 
 (defn handle-request!
-  [{:keys [headers body]} token]
+  [{:keys [headers body messages]} config]
   
-  (let [body (-> body
+  (let [update (-> body
                  slurp
-                 (json/parse-string true))
-        message (:message body)]
+                 (json/parse-string true)
+                 )
+        trigger-id
+                (-> messages
+                  (json/parse-string true)
+                  first
+                  :details
+                  :trigger_id 
+                  )]
   
-  
-  {:body (json/encode (handling/the-handler token message))
+  {:body
+   (json/encode 
+     (handling/the-handler
+       config
+       update
+       trigger-id))
    
    :headers headers
    
@@ -96,13 +102,11 @@
 
 
 (defn response->
-  [{:keys [status headers body]}]
+  [{:keys [status headers]}]
   (json/with-writer [*out* nil]
     (json/write
      (cond-> nil
        status
        (assoc :statusCode status)
        headers
-       (assoc :headers headers)
-       body
-       (merge (encode-body body))))))
+       (assoc :headers headers)))))

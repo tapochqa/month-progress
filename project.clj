@@ -10,7 +10,8 @@
   :dependencies
   [[org.clojure/clojure "1.11.1"]
    [http-kit            "2.6.0"]
-   [cheshire            "5.10.0"]]
+   [cheshire            "5.10.0"]
+   [clojure.java-time "1.2.0"]]
 
   :main ^:skip-aot month-progress.core
 

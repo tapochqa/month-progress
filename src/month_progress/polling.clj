@@ -2,8 +2,7 @@
   (:require 
     [month-progress.telegram :as telegram]
     [month-progress.handling :as handling]
-    [cheshire.core :as json]
-    [clojure.pprint :refer [pprint]]))
+    [cheshire.core :as json]))
 
 
 (defn save-offset [offset-file offset]
@@ -30,20 +29,7 @@
 (defn run-polling
   [config]
 
-  (let [{
-         {:keys [udpate-timeout]} :polling
-         :keys [telegram]}
-        config
-
-        me
-        (telegram/get-me telegram)
-
-        offset-file "TELEGRAM_OFFSET"
-
-        context
-        {:me me
-         :telegram telegram
-         :config config}
+  (let [offset-file "TELEGRAM_OFFSET"
 
         offset
         (load-offset offset-file)]
@@ -52,9 +38,7 @@
 
       (let [updates
             (with-safe-log
-              (telegram/get-updates telegram
-                              {:offset offset
-                               :timeout udpate-timeout}))
+              (telegram/get-updates config {:offset offset}))
 
             new-offset
             (or (some-> updates peek :update_id inc)
@@ -67,8 +51,7 @@
 
         (when offset
           (save-offset offset-file new-offset))
-        (doseq [message updates]
-          (pprint message)
-          (handling/the-handler (:token telegram) (:message message)))
+        (doseq [update updates]
+          (handling/the-handler config update nil))
 
         (recur new-offset)))))

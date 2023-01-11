@@ -12,13 +12,43 @@
   (polling/run-polling {:telegram {:token my-token} :polling {:update-timeout 1000}}))
 
 (defn lambda
-  [my-token]
-  (-> (lambda/->request)
-      (lambda/handle-request! my-token)
+  [config]
+  (-> (lambda/->request config)
+      (lambda/handle-request! config)
       (lambda/response->)))
 
 (defn -main
-  [my-token]
+  [my-token channel-id]
   #_(polling/run-polling {:telegram {:token my-token} :polling {:update-timeout 1000}})
-  #_(lambda my-token)
+  (lambda {:token 
+           my-token 
+           :channel-id
+           channel-id})
   )
+
+
+(comment
+    (binding [*in* (-> "trigger-request.json"
+                 clojure.java.io/resource
+                 clojure.java.io/reader)]
+
+    (-main 
+      "..."
+      -1001863747484)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

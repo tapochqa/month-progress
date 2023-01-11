@@ -1,3 +1,3 @@
 #! /bin/bash
 
-./tg-bot-Linux-x86_64
+./month-progress-Linux-x86_64 $TELEGRAM_BOT_TOKEN $CHANNEL_ID
