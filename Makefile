@@ -54,7 +54,7 @@ upload-version:
 
 deploy-version:
 	yc serverless function version create \
-		--function-name=${NAME} \
+		--function-name=month-progress \
 		--runtime bash \
 		--entrypoint handler.sh \
 		--memory 128m \
@@ -68,3 +68,7 @@ deploy: upload-version deploy-version
 
 set-webhook:
 	curl 'https://api.telegram.org/bot$(token)/setWebhook?url=https://functions.yandexcloud.net/$(id)'
+
+all: bash-package deploy
+
+
