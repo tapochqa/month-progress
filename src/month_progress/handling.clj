@@ -6,8 +6,6 @@
     [clojure.string :as str]))
 
 
-
-
 (defn the-handler 
   "Bot logic here"
   [config update trigger-id]
@@ -25,22 +23,38 @@
          now
          (jt/plus now (jt/hours 3))
          
+         
+         present-month (jt/truncate-to (jt/adjust now :first-day-of-month) :days)
+         
+         months  [present-month
+                  (jt/minus present-month (jt/months 1))
+                  (jt/minus present-month (jt/months 2))]
+         
+         first-month 
+         (first 
+           (filter 
+             (comp #{3 6 9 12} 
+               (fn [m] (jt/as m :month-of-year))) months))
+         
          first-hour
-         (jt/truncate-to (jt/adjust now :first-day-of-month) :days)
+         (jt/truncate-to first-month :days)
 
+         last-month
+         (jt/plus first-month (jt/months 2))
+         
          last-hour
          (jt/plus
-           (jt/truncate-to (jt/adjust now :last-day-of-month) :days)
+           (jt/truncate-to (jt/adjust last-month :last-day-of-month) :days)
            (jt/hours 23))
          
-         month-length (jt/time-between first-hour last-hour :hours)
+         season-length (jt/time-between first-hour last-hour :hours)
          
-         month-passed (jt/time-between first-hour (jt/truncate-to now :hours) :hours)
+         season-passed (jt/time-between first-hour (jt/truncate-to now :hours) :hours)
          
          relation
          (fn [length]
            (->> 
-            (/ length month-length)
+            (/ length season-length)
             (* 100)
             math/floor
             int))
@@ -49,12 +63,12 @@
          (->>
           (map (fn [hour]
                  {:hour hour
-                  :relation (relation hour)}) (range (inc month-length)))
+                  :relation (relation hour)}) (range (inc season-length)))
           (group-by :relation)
           (map (fn [item] (-> item last first))))
          
          %-passed
-         (relation month-passed)
+         (relation season-passed)
          
          blacks
          (int (/ %-passed 5)) 
@@ -65,14 +79,15 @@
          whites-str
          (str/join (repeat (- 20 blacks) "░"))]
         
+        
         (if 
           (seq (filter 
-                 (comp #{month-passed} :hour) 
+                 (comp #{season-passed} :hour) 
                  relation-arr))
           (telegram/send-message
             config
             (:channel-id config)
-            (str "<pre>" 
+            (str "<pre>"
               (format "%3d" %-passed)
               " %" " " blacks-str whites-str "" 
               "</pre>")
@@ -81,6 +96,8 @@
 
 
 (comment
+  
+  (the-handler 0 0 1)
   
   (spit "target/coll" (sort-by :hour (the-handler 0 0 1))))
 

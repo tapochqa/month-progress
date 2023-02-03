@@ -54,7 +54,7 @@ upload-version:
 
 deploy-version:
 	yc serverless function version create \
-		--function-name=month-progress \
+		--function-name=season-progress \
 		--runtime bash \
 		--entrypoint handler.sh \
 		--memory 128m \
